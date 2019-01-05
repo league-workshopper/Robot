@@ -30,7 +30,7 @@ If a user wants to teach a `Robot` new tricks, it is possible to extend the `Rob
 
 # Importing the jar file
 
-Download this [jar file](https://github.com/ecolban/Robot/blob/master/jar/Robot.jar?raw=true) and add it to the build path of your project. This jar file also contains the API documentation in the folder named `doc`.
+Download this [jar file](https://github.com/ecolban/Robot/blob/master/jar/robot.jar?raw=true) and add it to the build path of your project. This jar file also contains the API documentation in the folder named `doc`.
 
 
 
