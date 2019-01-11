@@ -10,7 +10,7 @@ public class RobotExample5 {
     private boolean juneDone = false;
     private boolean vicDone = false;
     private Runnable vicsPart = () -> {
-        vic.moveTo(300, 300);
+        vic.setPos(300, 300);
         firstMovement(vic);
         vicIsDone();
         waitForJune();
@@ -21,7 +21,7 @@ public class RobotExample5 {
         vic.hide();
     };
     private Runnable junesPart = () -> {
-        june.moveTo(600, 300);
+        june.setPos(600, 300);
         waitForVic();
         firstMovement(june);
         june.sleep(500);

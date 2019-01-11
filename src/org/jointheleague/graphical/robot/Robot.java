@@ -1,12 +1,14 @@
 package org.jointheleague.graphical.robot;
 
+import org.jointheleague.graphical.robot.curves.*;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyListener;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.PathIterator;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
@@ -25,7 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * the existing RobotWindow.
  * </p>
  * <p>
- * A Robot is controlled by calling its {@link #move(int)}, {@link #turn(int)},
+ * A Robot is controlled by calling its {@link #move(int)}, {@link #turn(double)},
  * {@link #microMove(int)}, and {@link #microTurn(int)} methods. These methods
  * should be called from the same thread, which is typically the main thread,
  * but different Robots may be controlled from different threads, thereby
@@ -38,9 +40,9 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * @author David Dunn &amp; Erik Colban &copy; 2016
  */
-public class Robot implements ActionListener, RobotInterface {
+public class Robot implements RobotInterface {
 
-    protected static final int TICK_LENGTH = 40; // in milliseconds
+    static final int TICK_LENGTH = 20; // in milliseconds
     private static final int MAXI_IMAGE_SIZE = 100;
     private static final int MINI_IMAGE_SIZE = 25;
     private static final int MIN_SPEED = 1;
@@ -52,18 +54,20 @@ public class Robot implements ActionListener, RobotInterface {
     private int penWidth;
     private Color penColor;
     private Pos pos;
-    private int angle;
+    private double angle;
     private boolean isVisible;
     private boolean isSparkling;
-    private ArrayList<Line> lines;
-    private Line currentLine;
-    private boolean isMini = false;
+    private ArrayList<Drawable> drawables;
+    private Drawable currentDrawable;
+    private boolean isMini;
     private Image maxiImage;
     private Image miniImage;
     private Image image;
     // Robot state end
+
     private RobotWindow window;
     private BlockingQueue<TimeQuantum> leakyBucket = new ArrayBlockingQueue<>(1);
+    private DynamicPath currentPath;
 
     public Robot() {
         this("rob");
@@ -100,7 +104,7 @@ public class Robot implements ActionListener, RobotInterface {
     public Robot(BufferedImage robotImage) {
         this(robotImage, 0, 0);
         Dimension dimension = window.getSize();
-        moveTo(dimension.width / 2, dimension.height / 2);
+        setPos(dimension.width / 2F, dimension.height / 2F);
     }
 
     /**
@@ -136,7 +140,7 @@ public class Robot implements ActionListener, RobotInterface {
         image = maxiImage;
         isMini = false;
 
-        lines = new ArrayList<>();
+        drawables = new ArrayList<>();
         window = RobotWindow.getInstance();
         window.addRobot(this);
     }
@@ -192,13 +196,13 @@ public class Robot implements ActionListener, RobotInterface {
      * @param g2 The graphics object used to draw the Robot.
      */
     void draw(Graphics2D g2) {
-        for (Line l : getLines()) {
-            l.draw(g2);
+        for (Drawable drawable : getDrawables()) {
+            drawable.draw(g2);
         }
-        Line line = getCurrentLine();
-        if (isPenDown() && line != null) // draws under robot
-        {
-            line.draw(g2);
+        // draws under robot
+        if (isPenDown()) {
+            Drawable drawable = getCurrentDrawable();
+            if (drawable != null) drawable.draw(g2);
         }
 
         // first cache the standard coordinate system
@@ -215,10 +219,14 @@ public class Robot implements ActionListener, RobotInterface {
         if (penDown && isVisible) // draws over robot
         {
             g2.setColor(Color.RED);
-            g2.fillOval(-4, -4, 8, 8);
+            if (isMini()) {
+                g2.fillOval(-2, -2, 4, 4);
+            } else {
+                g2.fillOval(-4, -4, 8, 8);
+            }
         }
 
-        if (isSparkling()) {
+        if (isVisible() && isSparkling()) {
             if (isMini()) {
                 double s = (double) MINI_IMAGE_SIZE / MAXI_IMAGE_SIZE;
                 g2.scale(s, s);
@@ -249,14 +257,12 @@ public class Robot implements ActionListener, RobotInterface {
 
     @Override
     public synchronized void changeRobot(String urlName) {
-        BufferedImage newImage = null;
-        URL url = null;
-
+        BufferedImage newImage;
         try {
-            url = new URL(urlName);
+            URL url = new URL(urlName);
             newImage = ImageIO.read(url);
         } catch (IOException e) {
-            System.err.println("There was an error changing robot's image. Make sure the URL is an image.");
+            System.err.println("There was an error changing robot's image. Make sure the URL addresses an image.");
             e.printStackTrace();
             newImage = (BufferedImage) image;
         }
@@ -301,25 +307,25 @@ public class Robot implements ActionListener, RobotInterface {
         penColor = new Color(r, g, b);
     }
 
-    private synchronized void addLine(final Line line) {
-        lines.add(line);
+    private synchronized void addDrawable(final Drawable segment) {
+        drawables.add(segment);
     }
 
     @Override
-    public synchronized void clearLines() {
-        lines.clear();
+    public synchronized void clearDrawables() {
+        drawables.clear();
     }
 
-    private synchronized List<Line> getLines() {
-        return new ArrayList<>(lines);
+    private synchronized List<Drawable> getDrawables() {
+        return new ArrayList<>(drawables);
     }
 
-    private synchronized Line getCurrentLine() {
-        return currentLine;
+    private synchronized Drawable getCurrentDrawable() {
+        return currentDrawable;
     }
 
-    private synchronized void setCurrentLine(Line line) {
-        this.currentLine = line;
+    private synchronized void setCurrentDrawable(Drawable drawable) {
+        this.currentDrawable = drawable;
     }
 
     @Override
@@ -334,16 +340,24 @@ public class Robot implements ActionListener, RobotInterface {
         isMini = false;
     }
 
-    private synchronized int getAngle() {
+    @Override
+    public synchronized void setPos(float x, float y) {
+        pos = new Robot.Pos(x, y);
+    }
+
+    @Override
+    public synchronized double getAngle() {
         return angle;
     }
 
-    private synchronized void setAngle(int a) {
-        angle = a;
+    @Override
+    public synchronized void setAngle(double a) {
+        angle = (a + 180.0) % 360.0 - 180.0;
+        if (angle < -180) angle += 360;
     }
 
     private synchronized void incrementAngle(int delta) {
-        angle += delta;
+        setAngle(angle + delta);
     }
 
     private synchronized boolean isSparkling() {
@@ -376,39 +390,12 @@ public class Robot implements ActionListener, RobotInterface {
 
     @Override
     public void move(int distance) {
-        float xPos0 = getX();
-        float yPos0 = getY();
-        float distanceMoved = 0;
-        int sgn = distance < 0 ? -1 : 1;
+        float[] ctrlPoints = new float[2];
 
-        double r_angle = Math.toRadians(getAngle());
-        double cos = Math.cos(r_angle);
-        double sin = Math.sin(r_angle);
-
-        try {
-            while (sgn * (distanceMoved - distance) < 0) {
-                leakyBucket.take(); // will block until a TimeQuatum.TICK becomes available
-                distanceMoved += sgn * speed;
-                if (sgn * (distanceMoved - distance) > 0) {
-                    distanceMoved = distance;
-                }
-                float xPos = (float) (xPos0 + distanceMoved * sin);
-                float yPos = (float) (yPos0 - distanceMoved * cos);
-                pos = new Pos(xPos, yPos);
-                if (isPenDown()) {
-                    Line line = new Line((int) xPos0, (int) yPos0, (int) xPos, (int) yPos, getPenWidth(), getPenColor());
-                    setCurrentLine(line);
-                }
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        synchronized (this) {
-            if (currentLine != null) {
-                addLine(currentLine);
-                currentLine = null;
-            }
-        }
+        final double rAngle = Math.toRadians(getAngle());
+        ctrlPoints[0] = (float) (getX() + distance * Math.sin(rAngle));
+        ctrlPoints[1] = (float) (getY() - distance * Math.cos(rAngle));
+        segmentTo(new Line(getX(), getY(), ctrlPoints, getPenWidth(), getPenColor()), distance >= 0);
     }
 
     @Override
@@ -416,40 +403,31 @@ public class Robot implements ActionListener, RobotInterface {
         if (sgn == 0) {
             throw new IllegalArgumentException("The argument sgn must be non-zero.");
         }
+        final float distance = (sgn < 0 ? -1 : 1) * speed;
+        final double rAngle = Math.toRadians(getAngle());
+        final float startX = getX();
+        final float startY = getY();
+        final float endX = (float) (getX() + distance * Math.sin(rAngle));
+        final float endY = (float) (getY() - distance * Math.cos(rAngle));
         leakyBucket.take();
-        float xPos0 = getX();
-        float yPos0 = getY();
-
-        double rAngle = Math.toRadians(getAngle());
-        double cos = Math.cos(rAngle);
-        double sin = Math.sin(rAngle);
-
-        float distanceMoved = sgn * speed;
-        float xPos = (float) (xPos0 + distanceMoved * sin);
-        float yPos = (float) (yPos0 - distanceMoved * cos);
-        pos = new Pos(xPos, yPos);
+        pos = new Pos(endX, endY);
         if (isPenDown()) {
-            Line line = new Line((int) xPos0, (int) yPos0, (int) xPos, (int) yPos, getPenWidth(), getPenColor());
-            setCurrentLine(line);
-        }
-        synchronized (this) {
-            if (currentLine != null) {
-                addLine(currentLine);
-                setCurrentLine(null);
+            final float[] ctrlPoints = new float[]{endX, endY};
+            synchronized (this) {
+                addDrawable(new Line(startX, startY, ctrlPoints, getPenWidth(), getPenColor()));
             }
         }
     }
 
     @Override
-    public void turn(int degrees) {
-        int degreesTurned = 0;
+    public void turn(double degrees) {
+        double degreesTurned = 0;
         int sgn = degrees < 0 ? -1 : 1;
 
-        int angle0 = getAngle();
+        double angle0 = getAngle();
         try {
             while (sgn * (degreesTurned - degrees) < 0) {
-                leakyBucket.take(); // will block until a TimeQuatum.TICK
-                // becomes available
+                leakyBucket.take(); // will block until a TimeQuatum.TICK becomes available
                 degreesTurned += sgn * speed;
                 if (sgn * (degreesTurned - degrees) > 0) {
                     degreesTurned = degrees;
@@ -491,15 +469,116 @@ public class Robot implements ActionListener, RobotInterface {
     }
 
     @Override
-    public synchronized void moveTo(int x, int y) {
+    @Deprecated
+    public synchronized void moveTo(float x, float y) {
         pos = new Pos(x, y);
     }
 
-    private synchronized float getX() {
+    @Override
+    public void moveTo(float x, float y, boolean relative, boolean jump) {
+        if (jump) {
+            pos = relative ? new Pos(getX() + x, getY() + y) : new Pos(x, y);
+        } else {
+            float[] ctrlPoints = new float[2];
+            ctrlPoints[0] = relative ? getX() + x : x;
+            ctrlPoints[1] = relative ? getY() + y : y;
+            segmentTo(new Move(getX(), getY(), ctrlPoints), true);
+        }
+    }
+
+    @Override
+    public void lineTo(final float x, final float y, final boolean relative) {
+        float[] ctrlPoints = new float[4];
+        ctrlPoints[0] = relative ? ctrlPoints[0] + x : x;
+        ctrlPoints[1] = relative ? ctrlPoints[1] + y : y;
+        segmentTo(new Line(getX(), getY(), ctrlPoints, getPenWidth(), getPenColor()), true);
+    }
+
+    @Override
+    public void quadTo(float x1, float y1, float x2, float y2, boolean relative) {
+        float[] ctrlPoints = new float[8];
+        ctrlPoints[0] = relative ? getX() + x1 : x1;
+        ctrlPoints[1] = relative ? getY() + y1 : y1;
+        ctrlPoints[2] = relative ? getX() + x2 : x2;
+        ctrlPoints[3] = relative ? getY() + y2 : y2;
+        segmentTo(new Quad(getX(), getY(), ctrlPoints, getPenWidth(), getPenColor()), true);
+    }
+
+    @Override
+    public void cubicTo(float x1, float y1, float x2, float y2, float x3, float y3, boolean relative) {
+        float[] ctrlPoints = new float[8];
+        ctrlPoints[0] = relative ? getX() + x1 : x1;
+        ctrlPoints[1] = relative ? getY() + y1 : y1;
+        ctrlPoints[2] = relative ? getX() + x2 : x2;
+        ctrlPoints[3] = relative ? getY() + y2 : y2;
+        ctrlPoints[4] = relative ? getX() + x3 : x3;
+        ctrlPoints[5] = relative ? getY() + y3 : y3;
+        segmentTo(new Cubic(getX(), getY(), ctrlPoints, getPenWidth(), getPenColor()), true);
+    }
+
+    private void segmentTo(Segment segment, boolean forwards) {
+        final double directionAdjustment = forwards ? 0.0 : Math.PI;
+        double startAngle = segment.getStartAngle();
+        if (!Double.isNaN(startAngle)) turn(getAngleToTurn(startAngle + directionAdjustment));
+
+        final float deltaT = speed / segment.getSize();
+        float t = 0.0F;
+        try {
+            while (t < 1.0F) {
+                leakyBucket.take();
+                t += deltaT;
+                Segment subSegment = segment.subSegment(t);
+                pos = subSegment.getPos(1F);
+                double endAngle = subSegment.getEndAngle();
+                if (!Double.isNaN(endAngle)) setAngle(Math.toDegrees(endAngle + directionAdjustment));
+                if (isPenDown() && (subSegment instanceof Drawable)) {
+                    setCurrentDrawable((Drawable) subSegment);
+                }
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        synchronized (this) {
+            if (currentDrawable != null) {
+                addDrawable(currentDrawable);
+                setCurrentDrawable(null);
+            }
+        }
+    }
+
+    @Override
+    public void followPath(PathIterator pathIterator) {
+        DynamicPath dynamicPath = new DynamicPath(pathIterator, getPenWidth(), getPenColor(), this);
+        if(isPenDown()) currentDrawable = dynamicPath;
+        try {
+            while (!dynamicPath.isComplete()) {
+                leakyBucket.take();
+                dynamicPath.incrementTime(speed);
+            }
+        } catch (InterruptedException ignore) {
+        }
+        synchronized (this) {
+            if (currentDrawable != null) {
+                addDrawable(currentDrawable);
+                setCurrentDrawable(null);
+            }
+        }
+    }
+
+    public double getAngleToTurn(final double targetAngle) {
+        final double angle = Math.toDegrees(targetAngle - Math.toRadians(getAngle()));
+        if (angle > 180.0) return (angle + 180.0) % 360.0 - 180.0;
+        if (angle < -180.0) return (angle - 180.0) % 360.0 + 180.0;
+        return angle;
+    }
+
+    @Override
+    public synchronized float getX() {
         return pos.x;
     }
 
-    private synchronized float getY() {
+    @Override
+    public synchronized float getY() {
         return pos.y;
     }
 
@@ -520,11 +599,6 @@ public class Robot implements ActionListener, RobotInterface {
     @Override
     public synchronized void setSpeed(int speed) {
         this.speed = Math.min(Math.max(MIN_SPEED, speed), MAX_SPEED);
-    }
-
-    public void actionPerformed(ActionEvent arg0) {
-        leakyBucket.offer(TimeQuantum.TICK);
-        window.repaint();
     }
 
     @Override
@@ -550,13 +624,28 @@ public class Robot implements ActionListener, RobotInterface {
         TICK
     }
 
-    private static class Pos {
+    ActionListener getTickerListener() {
+        return e -> {
+            leakyBucket.offer(TimeQuantum.TICK);
+            window.repaint();
+        };
+    }
+
+    public static class Pos {
         private final float x;
         private final float y;
 
-        Pos(float x, float y) {
+        public Pos(float x, float y) {
             this.x = x;
             this.y = y;
+        }
+
+        public float getX() {
+            return x;
+        }
+
+        public float getY() {
+            return y;
         }
     }
 }

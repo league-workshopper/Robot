@@ -15,10 +15,10 @@ public class RobotExample1 {
         rob.setPenColor(Color.RED);
         rob.sleep(1000);
 
-        int[] moves = {260, 150, 260, 150};
-        for (int move : moves) {
+        int[] distances = {260, 150, 260, 150};
+        for (int distance : distances) {
             rob.turn(90);
-            rob.move(move);
+            rob.move(distance);
         }
         rob.turn(90);
         rob.penUp();

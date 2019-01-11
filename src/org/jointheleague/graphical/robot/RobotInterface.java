@@ -1,6 +1,7 @@
 package org.jointheleague.graphical.robot;
 
 import java.awt.*;
+import java.awt.geom.PathIterator;
 import java.awt.image.BufferedImage;
 
 public interface RobotInterface {
@@ -57,7 +58,7 @@ public interface RobotInterface {
     /**
      * Removes all lines drawn by this Robot.
      */
-    void clearLines();
+    void clearDrawables();
 
     /**
      * Makes the image of the Robot small
@@ -68,6 +69,33 @@ public interface RobotInterface {
      * Makes the image of the Robot big
      */
     void expand();
+
+    /**
+     * Set the position of the robot to (x, y) while maintaining its direction.
+     *
+     * @param x the x-coordinate of the new position
+     * @param y the y-coordinate of the new position
+     *
+     */
+    void setPos(float x, float y);
+
+    /**
+     * Gets the robot's angle of orientation in degrees.
+     * An angle of 0 means that the robot is pointing straight up and the angle
+     * increases as the robot turns clockwise.
+     *
+     * @return the angle of the robot
+     */
+    double getAngle();
+
+    /**
+     * Set the robot's angle of orientation.
+     *
+     * @see #getAngle()
+     *
+     * @param a the angle in radians
+     */
+    void setAngle(double a);
 
     /**
      * Makes the Robot sparkle.
@@ -117,7 +145,7 @@ public interface RobotInterface {
      *
      * @param degrees The number of degrees to turn.
      */
-    void turn(int degrees);
+    void turn(double degrees);
 
     /**
      * Makes the Robot turn in place a small angle. If the argument is positive,
@@ -139,20 +167,95 @@ public interface RobotInterface {
     void sleep(int millis);
 
     /**
-     * Move the Robot to a given position. The Robot does not draw any line.
+     * Places the robot at (x, y)
      *
-     * @param x the x-coordinate of the new position
-     * @param y the y-coordinate of the new position
+     * @deprecated Use {@link #setPos(float x, float y)}
+     *
+     * @param x the x-coordinate
+     * @param y the y-coordinate
      */
-    void moveTo(int x, int y);
+    @Deprecated
+    void moveTo(float x, float y);
 
     /**
-     * Lifts the pen, i.e., the Robot stops drawing lines.
+     * Move the Robot to a given position. The Robot does not draw any line
+     * regardless of whether pen is up or down. Unless <code>jump</code> is true,
+     * if necessary, turn the robot first such that it is heading in the right
+     * direction before moving the robot.
+     *
+     * @param x        the x-coordinate of the new position
+     * @param y        the y-coordinate of the new position
+     * @param relative if true, x and y a relative to the robot's current position
+     * @param jump     if true, place robot directly at the new position. Otherwise,
+     *                 move the robot to the new position at the speed of the robot.
+     */
+    void moveTo(float x, float y, boolean relative, boolean jump);
+
+    /**
+     * Move the robot forward to a given position. If necessary, turn the robot
+     * first such that it is heading in the right direction.
+     *
+     * @param x        the x-coordinate of the robot's destination
+     * @param y        the y-coordinate of the robot's destination
+     * @param relative if true, x and y are given relative to the robot's current
+     *                 position
+     */
+    void lineTo(float x, float y, boolean relative);
+
+    /**
+     * Move the robot along a quadratic curve given by the robot's current position
+     * and the control points (x1, y1) and (x2, y2). If necessary, turn the robot
+     * first such that it is heading in the right direction.
+     *
+     * @param x1       the x-coordinate of the first control point
+     * @param y1       the y-coordinate of the first control point
+     * @param x2       the x-coordinate of the second control point
+     * @param y2       the y-coordinate of the second control point
+     * @param relative if true, the coordinates are give relative to the robot's
+     *                 current position
+     */
+    void quadTo(float x1, float y1, float x2, float y2, boolean relative);
+
+    /**
+     * Move the robot along a cubic curve given by the robot's current position
+     * and the control points (x1, y1), (x2, y2) and (x3, y3). If necessary, turn
+     * the robot first such that it is heading in the right direction.
+     *
+     * @param x1       the x-coordinate of the first control point
+     * @param y1       the y-coordinate of the first control point
+     * @param x2       the x-coordinate of the second control point
+     * @param y2       the y-coordinate of the second control point
+     * @param x3       the x-coordinate of the third control point
+     * @param y3       the y-coordinate of the third control point
+     * @param relative if true, the coordinates are give relative to the robot's
+     *                 current position
+     */
+    void cubicTo(float x1, float y1, float x2, float y2, float x3, float y3, boolean relative);
+
+    /**
+     * Move the robot along a path.
+     *
+     * @param pathIterator a PathIterator specifying the path
+     */
+    void followPath(PathIterator pathIterator);
+
+    /**
+     * @return the x-coordinate of the robot's position
+     */
+    float getX();
+
+    /**
+     * @return the y-coordinate of the robot's position
+     */
+    float getY();
+
+    /**
+     * Lifts the pen, i.e., the Robot stops drawing lines or curves.
      */
     void penUp();
 
     /**
-     * Set the pen down, i.e., the Robot traces its movements with lines.
+     * Set the pen down, i.e., the Robot traces its movements with lines or curves.
      */
     void penDown();
 

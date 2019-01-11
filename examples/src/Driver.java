@@ -3,7 +3,9 @@ import org.jointheleague.graphical.robot.Robot;
 import org.jointheleague.graphical.robot.RobotInterface;
 
 import java.awt.*;
+import java.awt.geom.PathIterator;
 import java.awt.image.BufferedImage;
+import java.util.Random;
 
 public class Driver implements RobotInterface {
 
@@ -25,7 +27,7 @@ public class Driver implements RobotInterface {
     }
 
     @Override
-    public void turn(int degrees) {
+    public void turn(double degrees) {
         robot.turn(degrees);
     }
 
@@ -37,6 +39,11 @@ public class Driver implements RobotInterface {
     @Override
     public void sleep(int millis) {
         robot.sleep(millis);
+    }
+
+    @Override @Deprecated
+    public void moveTo(float x, float y) {
+        robot.setPos(x, y);
     }
 
     @Override
@@ -60,8 +67,43 @@ public class Driver implements RobotInterface {
     }
 
     @Override
-    public void moveTo(int x, int y) {
-        robot.moveTo(x, y);
+    public void setPos(float x, float y) {
+        robot.setPos(x, y);
+    }
+
+    @Override
+    public void moveTo(float x, float y, boolean relative, boolean jump) {
+        robot.moveTo(x, y, relative, false);
+    }
+
+    @Override
+    public void lineTo(float x, float y, boolean relative) {
+        robot.lineTo(x, y, relative);
+    }
+
+    @Override
+    public void quadTo(float x1, float y1, float x2, float y2, boolean relative) {
+
+    }
+
+    @Override
+    public void cubicTo(float x1, float y1, float x2, float y2, float x3, float y3, boolean relative) {
+
+    }
+
+    @Override
+    public void followPath(PathIterator pathIterator) {
+        robot.followPath(pathIterator);
+    }
+
+    @Override
+    public float getX() {
+        return robot.getX();
+    }
+
+    @Override
+    public float getY() {
+        return robot.getY();
     }
 
     @Override
@@ -101,12 +143,13 @@ public class Driver implements RobotInterface {
 
     @Override
     public void setRandomPenColor() {
-        robot.setRandomPenColor();
+        int shade = 5 * new Random().nextInt(50);
+        robot.setPenColor(shade, shade, shade);
     }
 
     @Override
-    public void clearLines() {
-        robot.clearLines();
+    public void clearDrawables() {
+        robot.clearDrawables();
     }
 
     @Override
@@ -117,6 +160,16 @@ public class Driver implements RobotInterface {
     @Override
     public void expand() {
         robot.expand();
+    }
+
+    @Override
+    public double getAngle() {
+        return robot.getAngle();
+    }
+
+    @Override
+    public void setAngle(double a) {
+        robot.setAngle(a);
     }
 
     @Override

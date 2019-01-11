@@ -3,14 +3,14 @@ package org.jointheleague.graphical.robot;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 
 /**
- * Package private singleton class that defines the window in which the Robots
- * move around.
+ * Singleton class that defines the window in which the Robots move around.
  *
  * @author David Dunn &amp; Erik Colban &copy; 2016
  */
@@ -80,6 +80,10 @@ public class RobotWindow extends JPanel {
             g2.drawImage(leagueLogo, imgX, imgY, null);
         }
 
+        RenderingHints renderingHints = new RenderingHints(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHints(renderingHints);
         for (Robot robot : robotList) {
             robot.draw(g2);
         }
@@ -91,15 +95,16 @@ public class RobotWindow extends JPanel {
      * @param robot the robot
      */
     void addRobot(final Robot robot) {
+        final ActionListener tickerListener = robot.getTickerListener();
         try {
             SwingUtilities.invokeAndWait(() -> {
                 if (!guiHasBeenBuilt) {
                     buildGui();
-                    ticker = new Timer(Robot.TICK_LENGTH, robot);
+                    ticker = new Timer(Robot.TICK_LENGTH, tickerListener);
                     ticker.start();
                     guiHasBeenBuilt = true;
                 } else {
-                    ticker.addActionListener(robot);
+                    ticker.addActionListener(tickerListener);
                 }
                 robotList.add(robot);
                 repaint();

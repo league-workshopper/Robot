@@ -3,7 +3,7 @@ import org.jointheleague.graphical.robot.Robot;
 import java.awt.*;
 
 public class RobotExample4 {
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
         Robot rob = new Robot();
         rob.miniaturize();
         rob.setSpeed(5);

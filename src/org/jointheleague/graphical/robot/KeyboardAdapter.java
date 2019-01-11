@@ -37,7 +37,7 @@ import java.awt.event.KeyListener;
  * public static void main(String[] args) throws InterruptedException
  * {
  *	Robot rob = new Robot();
- *	Robot.addKeyboardAdapter(new KeyboardAdapter(rob));
+ *	rob.addKeyboardAdapter(new KeyboardAdapter());
  * }
  * }
  * </pre>
