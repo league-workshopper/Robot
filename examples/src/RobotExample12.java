@@ -22,7 +22,7 @@ public class RobotExample12 {
         rob.penDown();
         rob.sleep(500);
         rob.followPath(ellipse.getPathIterator(null));
-        rob.moveTo(w / 2F, h / 2F, false, false);
+        rob.moveTo(w / 2F, h / 2F, false);
     }
 
 }

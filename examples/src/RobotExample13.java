@@ -38,11 +38,11 @@ public class RobotExample13 {
             rob.setRandomPenColor();
             rob.penDown();
             new Thread(() -> {
-                rob.followPath(glyphShape.getPathIterator(null));
+                rob.followPath(glyphShape.getPathIterator(null), true);
                 Rectangle bounds = glyphShape.getBounds();
                 rob.penUp();
-                rob.moveTo(bounds.x + bounds.width / 2F, 400, false, false);
-                rob.moveTo(0, -1, true, false);
+                rob.moveTo(bounds.x + bounds.width / 2F, 400, false);
+                rob.moveTo(0, -1, true);
             }).start();
         }
     }

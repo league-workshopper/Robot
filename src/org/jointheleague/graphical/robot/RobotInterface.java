@@ -75,7 +75,6 @@ public interface RobotInterface {
      *
      * @param x the x-coordinate of the new position
      * @param y the y-coordinate of the new position
-     *
      */
     void setPos(float x, float y);
 
@@ -91,9 +90,8 @@ public interface RobotInterface {
     /**
      * Set the robot's angle of orientation.
      *
-     * @see #getAngle()
-     *
      * @param a the angle in radians
+     * @see #getAngle()
      */
     void setAngle(double a);
 
@@ -148,6 +146,14 @@ public interface RobotInterface {
     void turn(double degrees);
 
     /**
+     * Turn the robot in place until it has reached an orientation given in degrees.
+     * Zero is up, 90 is right.
+     *
+     * @param degrees the desired orientation.
+     */
+    void turnTo(double degrees);
+
+    /**
      * Makes the Robot turn in place a small angle. If the argument is positive,
      * the Robot turn clockwise, if negative the Robot turns counter-clockwise.
      * The angle turn is dependent on the Robot's speed.
@@ -169,10 +175,9 @@ public interface RobotInterface {
     /**
      * Places the robot at (x, y)
      *
-     * @deprecated Use {@link #setPos(float x, float y)}
-     *
      * @param x the x-coordinate
      * @param y the y-coordinate
+     * @deprecated Use {@link #setPos(float x, float y)}
      */
     @Deprecated
     void moveTo(float x, float y);
@@ -186,10 +191,8 @@ public interface RobotInterface {
      * @param x        the x-coordinate of the new position
      * @param y        the y-coordinate of the new position
      * @param relative if true, x and y a relative to the robot's current position
-     * @param jump     if true, place robot directly at the new position. Otherwise,
-     *                 move the robot to the new position at the speed of the robot.
      */
-    void moveTo(float x, float y, boolean relative, boolean jump);
+    void moveTo(float x, float y, boolean relative);
 
     /**
      * Move the robot forward to a given position. If necessary, turn the robot
@@ -234,6 +237,15 @@ public interface RobotInterface {
 
     /**
      * Move the robot along a path.
+     *
+     * @param pathIterator a PathIterator specifying the path
+     * @param fill         if true and the robot's pen is down, fill the path
+     *                     with the current pen color, otherwise draw the path
+     */
+    void followPath(PathIterator pathIterator, boolean fill);
+
+    /**
+     * Move the robot along a path and, if the pen is down, draw the path
      *
      * @param pathIterator a PathIterator specifying the path
      */

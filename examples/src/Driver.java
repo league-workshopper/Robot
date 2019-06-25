@@ -32,6 +32,11 @@ public class Driver implements RobotInterface {
     }
 
     @Override
+    public void turnTo(double degrees) {
+        robot.turnTo(degrees);
+    }
+
+    @Override
     public void microTurn(int sgn) throws InterruptedException {
         robot.microTurn(sgn);
     }
@@ -72,8 +77,8 @@ public class Driver implements RobotInterface {
     }
 
     @Override
-    public void moveTo(float x, float y, boolean relative, boolean jump) {
-        robot.moveTo(x, y, relative, false);
+    public void moveTo(float x, float y, boolean relative) {
+        robot.moveTo(x, y, relative);
     }
 
     @Override
@@ -89,6 +94,11 @@ public class Driver implements RobotInterface {
     @Override
     public void cubicTo(float x1, float y1, float x2, float y2, float x3, float y3, boolean relative) {
 
+    }
+
+    @Override
+    public void followPath(PathIterator pathIterator, boolean fill) {
+        robot.followPath(pathIterator, fill);
     }
 
     @Override

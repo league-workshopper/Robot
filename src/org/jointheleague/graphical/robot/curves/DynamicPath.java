@@ -20,6 +20,7 @@ final public class DynamicPath implements Drawable {
     private final int lineSize;
     private final Color color;
     private final Robot robot;
+    private final boolean fill;
 
     /**
      * Constructor
@@ -28,16 +29,18 @@ final public class DynamicPath implements Drawable {
      * @param lineSize     the line width used to draw the path.
      * @param color        the color used to draw the path
      * @param robot        a Robot that moves along the path
+     * @param fill         if set to true, fill path else draw the outline
      */
-    public DynamicPath(PathIterator pathIterator, int lineSize, Color color, Robot robot) {
+    public DynamicPath(PathIterator pathIterator, int lineSize, Color color, Robot robot, boolean fill) {
         this.pathIterator = pathIterator;
         this.lineSize = lineSize;
         this.color = color;
         this.robot = robot;
+        this.fill = fill;
         currentSegment = getCurrentSegment();
         assert currentSegment != null;
         double startAngle = currentSegment.getStartAngle();
-        if (!Double.isNaN(startAngle)) robot.turn(robot.getAngleToTurn(startAngle));
+        if (!Double.isNaN(startAngle)) robot.turnTo(startAngle);
     }
 
     private Segment getCurrentSegment() {
@@ -84,7 +87,7 @@ final public class DynamicPath implements Drawable {
                 currentSegment = getCurrentSegment();
                 assert currentSegment != null;
                 double startAngle = currentSegment.getStartAngle();
-                if (!Double.isNaN(startAngle)) robot.turn(robot.getAngleToTurn(startAngle));
+                if (!Double.isNaN(startAngle)) robot.turnTo(startAngle);
                 time = 0F;
             }
         }
@@ -110,6 +113,10 @@ final public class DynamicPath implements Drawable {
     public void draw(Graphics2D g2) {
         g2.setStroke(new BasicStroke(lineSize));
         g2.setColor(color);
-        g2.draw(getPath2D());
+        if (fill) {
+            g2.fill(getPath2D());
+        } else {
+            g2.draw(getPath2D());
+        }
     }
 }

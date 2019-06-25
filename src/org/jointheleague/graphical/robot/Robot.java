@@ -440,6 +440,11 @@ public class Robot implements RobotInterface {
     }
 
     @Override
+    public void turnTo(double degrees) {
+        turn(getAngleToTurn(degrees));
+    }
+
+    @Override
     public void microTurn(int sgn) throws InterruptedException {
         if (sgn == 0) {
             throw new IllegalArgumentException("sgn must be non-zero.");
@@ -475,28 +480,24 @@ public class Robot implements RobotInterface {
     }
 
     @Override
-    public void moveTo(float x, float y, boolean relative, boolean jump) {
-        if (jump) {
-            pos = relative ? new Pos(getX() + x, getY() + y) : new Pos(x, y);
-        } else {
-            float[] ctrlPoints = new float[2];
-            ctrlPoints[0] = relative ? getX() + x : x;
-            ctrlPoints[1] = relative ? getY() + y : y;
-            segmentTo(new Move(getX(), getY(), ctrlPoints), true);
-        }
+    public void moveTo(float x, float y, boolean relative) {
+        float[] ctrlPoints = new float[2];
+        ctrlPoints[0] = relative ? getX() + x : x;
+        ctrlPoints[1] = relative ? getY() + y : y;
+        segmentTo(new Move(getX(), getY(), ctrlPoints), true);
     }
 
     @Override
     public void lineTo(final float x, final float y, final boolean relative) {
-        float[] ctrlPoints = new float[4];
-        ctrlPoints[0] = relative ? ctrlPoints[0] + x : x;
-        ctrlPoints[1] = relative ? ctrlPoints[1] + y : y;
+        float[] ctrlPoints = new float[2];
+        ctrlPoints[0] = relative ? getX() + x : x;
+        ctrlPoints[1] = relative ? getY() + y : y;
         segmentTo(new Line(getX(), getY(), ctrlPoints, getPenWidth(), getPenColor()), true);
     }
 
     @Override
     public void quadTo(float x1, float y1, float x2, float y2, boolean relative) {
-        float[] ctrlPoints = new float[8];
+        float[] ctrlPoints = new float[4];
         ctrlPoints[0] = relative ? getX() + x1 : x1;
         ctrlPoints[1] = relative ? getY() + y1 : y1;
         ctrlPoints[2] = relative ? getX() + x2 : x2;
@@ -506,7 +507,7 @@ public class Robot implements RobotInterface {
 
     @Override
     public void cubicTo(float x1, float y1, float x2, float y2, float x3, float y3, boolean relative) {
-        float[] ctrlPoints = new float[8];
+        float[] ctrlPoints = new float[6];
         ctrlPoints[0] = relative ? getX() + x1 : x1;
         ctrlPoints[1] = relative ? getY() + y1 : y1;
         ctrlPoints[2] = relative ? getX() + x2 : x2;
@@ -519,7 +520,7 @@ public class Robot implements RobotInterface {
     private void segmentTo(Segment segment, boolean forwards) {
         final double directionAdjustment = forwards ? 0.0 : Math.PI;
         double startAngle = segment.getStartAngle();
-        if (!Double.isNaN(startAngle)) turn(getAngleToTurn(startAngle + directionAdjustment));
+        if (!Double.isNaN(startAngle)) turnTo(startAngle + directionAdjustment);
 
         final float deltaT = speed / segment.getSize();
         float t = 0.0F;
@@ -547,9 +548,9 @@ public class Robot implements RobotInterface {
     }
 
     @Override
-    public void followPath(PathIterator pathIterator) {
-        DynamicPath dynamicPath = new DynamicPath(pathIterator, getPenWidth(), getPenColor(), this);
-        if(isPenDown()) currentDrawable = dynamicPath;
+    public void followPath(PathIterator pathIterator, boolean fill) {
+        DynamicPath dynamicPath = new DynamicPath(pathIterator, getPenWidth(), getPenColor(), this, fill);
+        if (isPenDown()) currentDrawable = dynamicPath;
         try {
             while (!dynamicPath.isComplete()) {
                 leakyBucket.take();
@@ -565,7 +566,12 @@ public class Robot implements RobotInterface {
         }
     }
 
-    public double getAngleToTurn(final double targetAngle) {
+    @Override
+    public void followPath(PathIterator pathIterator) {
+        followPath(pathIterator, false);
+    }
+
+    private double getAngleToTurn(final double targetAngle) {
         final double angle = Math.toDegrees(targetAngle - Math.toRadians(getAngle()));
         if (angle > 180.0) return (angle + 180.0) % 360.0 - 180.0;
         if (angle < -180.0) return (angle - 180.0) % 360.0 + 180.0;
